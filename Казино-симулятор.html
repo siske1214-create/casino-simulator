@@ -69,7 +69,7 @@ h3{margin:0 0 6px;font-size:15px}
 
 <div class="top"><div><div class="logo">🎰 LUCKY ROYAL</div><div class="lbl">Игровые деньги</div></div>
 <div style="text-align:right"><div class="bal" id="bal">0</div></div>
-<button onclick="cash.classList.toggle('on')">💸 Выдать себе</button></div>
+<div style="display:flex;gap:6px;align-items:center;flex-shrink:0"><button class="g sm" id="lng" onclick="toggleLang()">EN</button><button onclick="cash.classList.toggle('on')">💸 Выдать себе</button></div></div>
 <div class="panel sec center" id="cash" style="margin-top:8px">
 <div class="row"><button class="g" onclick="give(1000)">+1 000</button><button class="g" onclick="give(10000)">+10 000</button><button class="g" onclick="give(1000000)">+1 000 000</button><button class="g" onclick="give(1e9)">+1 млрд</button></div>
 <div class="row"><input id="cu" type="number" min="1" placeholder="Своя сумма"><button onclick="give(+cu.value)">Выдать</button></div></div>
@@ -131,12 +131,66 @@ h3{margin:0 0 6px;font-size:15px}
 const $=id=>document.getElementById(id),bet=$('bet'),cash=$('cash'),cu=$('cu');
 let bal=1000;
 try{const v=localStorage.getItem('casino_bal');if(v!==null&&!isNaN(+v))bal=+v}catch(e){}
-const fmt=n=>Math.round(n).toLocaleString('ru-RU');
-function show(){$('bal').textContent=fmt(bal)+' ₽';try{localStorage.setItem('casino_bal',bal)}catch(e){}}
+let lang='ru';try{const l=localStorage.getItem('casino_lang');if(l==='en'||l==='ru')lang=l}catch(e){}
+const fmt=n=>Math.round(n).toLocaleString(lang==='en'?'en-US':'ru-RU');
+function show(){$('bal').textContent=lang==='en'?'$'+fmt(bal):fmt(bal)+' ₽';try{localStorage.setItem('casino_bal',bal)}catch(e){}}
 function give(n){if(!n||n<=0)return;bal+=n;show()}
 function mb(k){bet.value=Math.max(1,Math.floor(bet.value*k))}
 function getBet(){const b=Math.floor(+bet.value);return(!b||b<1||b>bal)?0:b}
-function say(id,t,c){const e=$(id);e.textContent=t;e.className='msg '+(c||'')}
+function say(id,k,c,a){const e=$(id);a=a||[];e._r=[k,a];e.textContent=tr(k,...a);e.className='msg '+(c||'')}
+
+const TX={
+badbet:['Неверная ставка','Invalid bet'],
+m1i:['Бросай шарики!','Drop the balls!'],
+plRes:[(m,w,b)=>'×'+m+' → '+(w>=b?'выигрыш ':'вернулось ')+fmt(w),(m,w,b)=>'×'+m+' → '+(w>=b?'win ':'returned ')+fmt(w)],
+m2i:['Крути колесо!','Spin the wheel!'],
+spinning:['Крутится...','Spinning...'],
+whRes:[(m,w)=>m===0?'Ноль! Ставка сгорела':'×'+m+' → '+fmt(w),(m,w)=>m===0?'Zero! Bet lost':'×'+m+' → '+fmt(w)],
+m3i:['Сделай ставку и раздай','Place a bet and deal'],
+yourTurn:['Твой ход','Your turn'],
+bjBust:[a=>'Перебор! −'+fmt(a),a=>'Bust! −'+fmt(a)],
+bjBJ:[a=>'Блэкджек! +'+fmt(a),a=>'Blackjack! +'+fmt(a)],
+bjWin:[a=>'Победа! +'+fmt(a),a=>'You win! +'+fmt(a)],
+bjPush:['Ничья, ставка вернулась','Push, bet returned'],
+bjLose:[a=>'Дилер выиграл. −'+fmt(a),a=>'Dealer wins. −'+fmt(a)],
+m4i:['Нажимай на поле: каждое нажатие = ставка из панели выше','Tap the board: each tap places the bet from the panel above'],
+rlNothing:['Нечего повторять или не хватает денег','Nothing to repeat or not enough money'],
+rlFirst:['Сначала поставь на что-нибудь','Place a bet on something first'],
+rlRolling:['Шарик крутится...','The ball is rolling...'],
+rlRes:[(n,net)=>'Выпало '+n+' ('+(n===0?'зеро':REDS.has(n)?'красное':'чёрное')+'): '+(net>0?'+'+fmt(net):net<0?'−'+fmt(-net):'в ноль'),
+       (n,net)=>'Landed on '+n+' ('+(n===0?'zero':REDS.has(n)?'red':'black')+'): '+(net>0?'+'+fmt(net):net<0?'−'+fmt(-net):'break-even')],
+even:['Чёт','Even'],red:['Красное','Red'],black:['Чёрное','Black'],odd:['Нечёт','Odd'],
+m5i:['Крути барабаны!','Spin the reels!'],
+slN:[n=>'Каждый слот — отдельная ставка ('+n+' шт.)',n=>'Each slot is a separate bet ('+n+')'],
+slBad:[(n,tot)=>'Неверная ставка или не хватает денег на '+n+' сл. (нужно '+fmt(tot||0)+')',(n,tot)=>'Invalid bet or not enough money for '+n+' slot(s) (need '+fmt(tot||0)+')'],
+slGo:[tot=>'Крутим... (−'+fmt(tot)+')',tot=>'Spinning... (−'+fmt(tot)+')'],
+slRes:[(w,wins,n,net)=>w?(n>1?'Выиграло слотов: '+wins+' из '+n+' · +'+fmt(w):'Выигрыш +'+fmt(w))+(n>1?' (итог '+(net>=0?'+':'−')+fmt(Math.abs(net))+')':''):'Не повезло',
+       (w,wins,n,net)=>w?(n>1?'Winning slots: '+wins+' of '+n+' · +'+fmt(w):'Win +'+fmt(w))+(n>1?' (net '+(net>=0?'+':'−')+fmt(Math.abs(net))+')':''):'No luck'],
+m6i:['Поставь и веди пингвина по льдинам','Place a bet and lead the penguin across the ice'],
+pgGo:['Жми «Прыгнуть»!','Hit "Jump"!'],
+pgCashed:[(m,w)=>'Забрал ×'+m+': +'+fmt(w),(m,w)=>'Cashed out ×'+m+': +'+fmt(w)],
+pgBreak:['Льдина треснула! Пингвин в воде...','The ice cracked! The penguin is in the water...'],
+pgHold:[m=>'Льдина выдержала! Теперь ×'+m+' — прыгать дальше или забрать?',m=>'The ice held! Now ×'+m+' — jump again or cash out?'],
+pgLost:[b=>'Ставка сгорела: −'+fmt(b),b=>'Bet lost: −'+fmt(b)],
+pwin:[v=>'выигрыш: '+fmt(v),v=>'win: '+fmt(v)],
+pstat:[(j,f)=>'Прыжков: '+j+' · падений: '+f+(j?' ('+Math.round(f/j*100)+'%)':''),(j,f)=>'Jumps: '+j+' · falls: '+f+(j?' ('+Math.round(f/j*100)+'%)':'')],
+phint:[(p,m)=>'Следующий прыжок: шанс упасть '+p+'% · множитель станет ×'+m,(p,m)=>'Next jump: '+p+'% chance to fall · multiplier becomes ×'+m]
+};
+const tr=(k,...a)=>{const v=TX[k][lang==='en'?1:0];return typeof v==='function'?v(...a):v};
+const EN={"Игровые деньги": "Play money", "💸 Выдать себе": "💸 Give myself", "+1 000": "+1,000", "+10 000": "+10,000", "+1 000 000": "+1,000,000", "+1 млрд": "+1 bn", "Выдать": "Give", "🎡 Колесо": "🎡 Wheel", "🎲 Рулетка": "🎲 Roulette", "🎰 Слоты": "🎰 Slots", "🃏 Блэкджек": "🃏 Blackjack", "🐧 Пингвин": "🐧 Penguin", "Ставка": "Bet", "Всё": "All in", "Бросить шарик": "Drop ball", "⚙ Настройка Plinko": "⚙ Plinko settings", "Рядов колышков:": "Peg rows:", "Множители ячеек (меняй любые)": "Slot multipliers (edit any)", "Авто по умолчанию": "Auto default", "Все ×1": "All ×1", "Джекпот всем ×100": "Jackpot for all ×100", "Средний возврат (RTP):": "Average return (RTP):", "Крутить": "Spin", "⚙ Настройка колеса": "⚙ Wheel settings", "Секторов:": "Segments:", "Множители секторов": "Segment multipliers", "По умолчанию": "Default", "Случайные": "Random", "Все ×2": "All ×2", "Дилер": "Dealer", "Ты": "You", "Раздать": "Deal", "Ещё": "Hit", "Хватит": "Stand", "Удвоить": "Double", "Блэкджек платит 3:2 · дилер берёт до 17": "Blackjack pays 3:2 · dealer draws to 17", "Убрать ставки": "Clear bets", "Повторить": "Repeat", "Европейская рулетка, 37 чисел: число ×36 · красное/чёрное/чёт/нечёт/половины ×2 · дюжины ×3 · зеро забирает все внешние ставки": "European roulette, 37 numbers: straight-up ×36 · red/black/even/odd/halves ×2 · dozens ×3 · zero takes all outside bets", "Слотов сразу:": "Slots at once:", "Выигрышная линия — по центру": "Winning line is in the middle", "Начать": "Start", "Прыгнуть 🐧": "Jump 🐧", "Забрать": "Cash out", "Шанс слома льдины:": "Ice break chance:", "Прирост за прыжок:": "Gain per jump:", "(растёт вместе с шансом слома: 5% → +0.1, 70% → +2.0)": "(grows with break chance: 5% → +0.1, 70% → +2.0)", "Множитель = 1 + прирост × число прыжков. Заберёшь вовремя — выигрыш твой, упадёшь — ставка сгорит.": "Multiplier = 1 + gain × number of jumps. Cash out in time and the win is yours; fall in and the bet is lost."};
+function applyLang(){
+ document.documentElement.lang=lang;document.title=lang==='en'?'Casino Simulator':'Казино-симулятор';
+ const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;
+ while(n=w.nextNode()){if(n.parentNode.tagName==='SCRIPT')continue;
+  if(lang==='en'){const s=n.nodeValue.trim().replace(/[\u00a0\u202f]/g,' ');if(EN[s]){if(n._o===undefined)n._o=n.nodeValue;n.nodeValue=EN[s]}}
+  else if(n._o!==undefined){n.nodeValue=n._o;n._o=undefined}}
+ cu.placeholder=lang==='en'?'Custom amount':'Своя сумма';
+ $('lng').textContent=lang==='en'?'RU':'EN';
+ ['m1','m2','m3','m4','m5','m6'].forEach(id=>{const e=$(id);if(e._r)say(id,e._r[0],e.className.replace(/^msg\s*/,''),e._r[1])});
+ show();rlRender();pgInfo()}
+function toggleLang(){setLang(lang==='ru'?'en':'ru')}
+function setLang(l){lang=l;try{localStorage.setItem('casino_lang',l)}catch(e){}applyLang()}
+
 const colM=m=>m===0?'#4a2a3a':m<1?'#7a4a1e':m<2?'#2a6a55':m<5?'#2a4fa8':m<20?'#7a3fd4':'#d4a017';
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('on'));b.classList.add('on');['g1','g2','g3','g4','g5','g6'].forEach(g=>$(g).classList.toggle('on',g===b.dataset.t))});
 function inputs(box,arr,cb){box.innerHTML='';arr.forEach((v,i)=>{const e=document.createElement('input');e.type='number';e.step='0.1';e.min='0';e.value=v;e.oninput=()=>{arr[i]=Math.max(0,+e.value||0);cb()};box.appendChild(e)})}
@@ -158,7 +212,7 @@ function drawPl(){px.clearRect(0,0,pc.width,pc.height);
  for(let k=0;k<=ROWS;k++){const x=CX+(k-ROWS/2)*SP,m=MUL[k],w=SP-5;px.fillStyle=lastHit===k?'#fff':colM(m);px.beginPath();px.roundRect(x-w/2,Y0+ROWS*DY-4,w,30,6);px.fill();
   px.fillStyle=lastHit===k?'#000':'#fff';px.font='bold '+fs+'px system-ui';px.textAlign='center';px.fillText('×'+m,x,Y0+ROWS*DY+16)}
  balls.forEach(b=>{px.fillStyle='#ffc83d';px.shadowColor='#ffc83d';px.shadowBlur=12;px.beginPath();px.arc(b.x,b.y,7,0,7);px.fill();px.shadowBlur=0})}
-function drop(){const b=getBet();if(!b){say('m1','Неверная ставка','lose');return}
+function drop(){const b=getBet();if(!b){say('m1','badbet','lose');return}
  bal-=b;show();let R=0,x=CX;const pts=[[CX,16]];
  for(let r=0;r<ROWS;r++){pts.push([x,Y0+r*DY-9]);const d=Math.random()<.5?1:-1;if(d>0)R++;x+=d*SP/2}
  pts.push([x,Y0+ROWS*DY-4]);
@@ -166,7 +220,7 @@ function drop(){const b=getBet();if(!b){say('m1','Неверная ставка'
 let lt=0;
 function loop(ts){const dt=Math.min(40,ts-(lt||ts));lt=ts;
  balls.forEach(b=>{b.t+=dt/150;while(b.t>=1&&!b.fin){b.t-=1;b.i++;if(b.i>=b.pts.length-1){b.fin=true;b.i=b.pts.length-2;b.t=1;const w=b.bet*b.mul;bal+=w;show();lastHit=b.R;
-  say('m1','×'+b.mul+' → '+(w>=b.bet?'выигрыш ':'вернулось ')+fmt(w),w>b.bet?'win':w<b.bet?'lose':'');setTimeout(()=>{lastHit=-1;drawPl()},700)}}
+  say('m1','plRes',w>b.bet?'win':w<b.bet?'lose':'',[b.mul,w,b.bet]);setTimeout(()=>{lastHit=-1;drawPl()},700)}}
  const a=b.pts[b.i],c=b.pts[b.i+1],t=Math.min(1,b.t),e=t*t*.6+t*.4;b.x=a[0]+(c[0]-a[0])*e;b.y=a[1]+(c[1]-a[1])*e});
  balls=balls.filter(b=>!b.fin);drawPl();if(balls.length)requestAnimationFrame(loop);else lt=0}
 
@@ -186,12 +240,12 @@ function drawW(){const N=WS.length,C=200;wx.clearRect(0,0,400,400);
   wx.save();wx.translate(C,C);wx.rotate((a0+a1)/2);wx.fillStyle='#fff';wx.font='bold '+(N>24?12:N>14?15:18)+'px system-ui';wx.textAlign='right';wx.textBaseline='middle';wx.fillText('×'+WS[i],178,0);wx.restore()}
  wx.strokeStyle='#ffc83d';wx.lineWidth=6;wx.beginPath();wx.arc(C,C,196,0,7);wx.stroke();
  wx.fillStyle='#0b0713';wx.beginPath();wx.arc(C,C,22,0,7);wx.fill();wx.strokeStyle='#ffc83d';wx.lineWidth=3;wx.stroke()}
-function spin(){if(spinning)return;const b=getBet();if(!b){say('m2','Неверная ставка','lose');return}
- bal-=b;show();spinning=true;$('spin').disabled=true;$('wn').disabled=true;say('m2','Крутится...');
+function spin(){if(spinning)return;const b=getBet();if(!b){say('m2','badbet','lose');return}
+ bal-=b;show();spinning=true;$('spin').disabled=true;$('wn').disabled=true;say('m2','spinning');
  const N=WS.length,SEG=360/N,i=Math.random()*N|0,m=WS[i],target=-(i+.5)*SEG+(Math.random()-.5)*SEG*.7;
  rot+=360*6+((((target-rot)%360)+360)%360);wc.style.transform='rotate('+rot+'deg)';
  setTimeout(()=>{const w=b*m;bal+=w;show();spinning=false;$('spin').disabled=false;$('wn').disabled=false;
-  say('m2',m===0?'Ноль! Ставка сгорела':'×'+m+' → '+fmt(w),m>1?'win':m<1?'lose':'')},4300)}
+  say('m2','whRes',m>1?'win':m<1?'lose':'',[m,w])},4300)}
 
 /* ===== BLACKJACK ===== */
 let deck=[],P=[],D=[],cur=0;
@@ -201,14 +255,14 @@ function val(h){let t=0,a=0;h.forEach(c=>{if(c.r==='A'){a++;t+=11}else t+=isNaN(
 const cardEl=(c,h)=>'<div class="c '+(h?'b':'')+(c.s==='♥'||c.s==='♦'?' r':'')+'">'+c.r+'<small>'+c.s+'</small></div>';
 function bjDraw(hide){$('ph').innerHTML=P.map(c=>cardEl(c)).join('');$('dh').innerHTML=D.map((c,i)=>cardEl(c,hide&&i===1)).join('');$('pv').textContent=val(P);$('dv').textContent=hide?'?':val(D)}
 function btn(a){$('hit').disabled=$('stand').disabled=!a;$('dbl').disabled=!a||P.length!==2||bal<cur;$('deal').disabled=a}
-function bjDeal(){const b=getBet();if(!b){say('m3','Неверная ставка','lose');return}
- bal-=b;cur=b;show();P=[draw(),draw()];D=[draw(),draw()];bjDraw(true);btn(true);say('m3','Твой ход');if(val(P)===21)bjStand()}
-function bjHit(){P.push(draw());bjDraw(true);if(val(P)>21)end('Перебор! −'+fmt(cur),0);else if(val(P)===21)bjStand()}
-function bjDouble(){bal-=cur;cur*=2;show();P.push(draw());bjDraw(true);if(val(P)>21)end('Перебор! −'+fmt(cur),0);else bjStand()}
+function bjDeal(){const b=getBet();if(!b){say('m3','badbet','lose');return}
+ bal-=b;cur=b;show();P=[draw(),draw()];D=[draw(),draw()];bjDraw(true);btn(true);say('m3','yourTurn');if(val(P)===21)bjStand()}
+function bjHit(){P.push(draw());bjDraw(true);if(val(P)>21)end('bjBust',0,cur);else if(val(P)===21)bjStand()}
+function bjDouble(){bal-=cur;cur*=2;show();P.push(draw());bjDraw(true);if(val(P)>21)end('bjBust',0,cur);else bjStand()}
 function bjStand(){while(val(D)<17)D.push(draw());const p=val(P),d=val(D);
- if(p===21&&P.length===2&&d!==21)end('Блэкджек! +'+fmt(cur*1.5),2.5);
- else if(d>21||p>d)end('Победа! +'+fmt(cur),2);else if(p===d)end('Ничья, ставка вернулась',1);else end('Дилер выиграл. −'+fmt(cur),0)}
-function end(t,k){bal+=cur*k;show();bjDraw(false);btn(false);say('m3',t,k>1?'win':k===0?'lose':'')}
+ if(p===21&&P.length===2&&d!==21)end('bjBJ',2.5,cur*1.5);
+ else if(d>21||p>d)end('bjWin',2,cur);else if(p===d)end('bjPush',1,cur);else end('bjLose',0,cur)}
+function end(key,k,a){bal+=cur*k;show();bjDraw(false);btn(false);say('m3',key,k>1?'win':k===0?'lose':'',[a])}
 
 /* ===== ROULETTE ===== */
 const REDS=new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
@@ -222,16 +276,16 @@ function rlRender(){
  let h='<div class="rgrid" style="grid-template-columns:1fr">'+rs('n0','0','rz')+'</div><div class="rgrid" style="margin-top:3px">';
  for(const r of [3,2,1])for(let c=0;c<12;c++){const n=c*3+r;h+=rs('n'+n,n,rcol(n))}
  h+='</div><div class="rgrid" style="grid-template-columns:repeat(3,1fr);margin-top:3px">'+rs('d1','1–12','')+rs('d2','13–24','')+rs('d3','25–36','')+'</div>';
- h+='<div class="rgrid" style="grid-template-columns:repeat(3,1fr);margin-top:3px">'+rs('low','1–18','')+rs('even','Чёт','')+rs('red','Красное','rr')+rs('black','Чёрное','rk')+rs('odd','Нечёт','')+rs('high','19–36','')+'</div>';
+ h+='<div class="rgrid" style="grid-template-columns:repeat(3,1fr);margin-top:3px">'+rs('low','1–18','')+rs('even',tr('even'),'')+rs('red',tr('red'),'rr')+rs('black',tr('black'),'rk')+rs('odd',tr('odd'),'')+rs('high','19–36','')+'</div>';
  $('rboard').innerHTML=h}
 $('rboard').onclick=e=>{const b=e.target.closest('[data-k]');if(b)rlBet(b.dataset.k)};
 function rlMult(k,n){
  if(k[0]==='n')return +k.slice(1)===n?36:0;
  if(n===0)return 0;
  switch(k){case 'red':return REDS.has(n)?2:0;case 'black':return REDS.has(n)?0:2;case 'even':return n%2===0?2:0;case 'odd':return n%2?2:0;case 'low':return n<=18?2:0;case 'high':return n>=19?2:0;case 'd1':return n<=12?3:0;case 'd2':return n>12&&n<=24?3:0;case 'd3':return n>24?3:0}return 0}
-function rlBet(k){if(rolling)return;const b=getBet();if(!b){say('m4','Неверная ставка','lose');return}bal-=b;show();rb[k]=(rb[k]||0)+b;rlRender()}
+function rlBet(k){if(rolling)return;const b=getBet();if(!b){say('m4','badbet','lose');return}bal-=b;show();rb[k]=(rb[k]||0)+b;rlRender()}
 function rlClear(){if(rolling)return;bal+=rsum(rb);rb={};show();rlRender()}
-function rlRepeat(){if(rolling)return;const t=rsum(lastRb);rlClear();if(!t||t>bal){say('m4','Нечего повторять или не хватает денег','lose');return}bal-=t;rb={...lastRb};show();rlRender()}
+function rlRepeat(){if(rolling)return;const t=rsum(lastRb);rlClear();if(!t||t>bal){say('m4','rlNothing','lose');return}bal-=t;rb={...lastRb};show();rlRender()}
 const RO=[0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26],RA=2*Math.PI/37;
 const rcv=$('rwheel'),rx=rcv.getContext('2d');
 let rw={th:0,phi:0,r:115,spin:null,hasBall:false},rlT=0;
@@ -259,30 +313,30 @@ function rlLoop(ts){const dt=Math.min(50,ts-(rlT||ts));rlT=ts;const s=rw.spin;
  else rw.th+=dt*.0004;
  if($('g4').classList.contains('on'))rlDraw();
  requestAnimationFrame(rlLoop)}
-function rlSpin(){if(rolling)return;const tot=rsum(rb);if(!tot){say('m4','Сначала поставь на что-нибудь','lose');return}
- rolling=true;$('rspin').disabled=true;say('m4','Шарик крутится...');
+function rlSpin(){if(rolling)return;const tot=rsum(rb);if(!tot){say('m4','rlFirst','lose');return}
+ rolling=true;$('rspin').disabled=true;say('m4','rlRolling');
  const n=Math.random()*37|0,i=RO.indexOf(n);
  rw.hasBall=true;rw.r=137;
  rw.spin={t0:performance.now(),T:7000,phiEnd:i*RA,turns:8+Math.random()*3,done:()=>{
   const el=$('rres');el.textContent=n;el.style.background=cc(n);
   let w=0;for(const k in rb)w+=rb[k]*rlMult(k,n);bal+=w;show();lastRb=rb;rb={};
   rhist.unshift(n);rhist=rhist.slice(0,12);$('rh').innerHTML=rhist.map(x=>'<span class="rh" style="background:'+cc(x)+'">'+x+'</span>').join('');
-  const net=w-tot;say('m4','Выпало '+n+' ('+(n===0?'зеро':REDS.has(n)?'красное':'чёрное')+'): '+(net>0?'+'+fmt(net):net<0?'−'+fmt(-net):'в ноль'),net>0?'win':net<0?'lose':'');
+  const net=w-tot;say('m4','rlRes',net>0?'win':net<0?'lose':'',[n,net]);
   rolling=false;$('rspin').disabled=false;rlRender()}}}
 
 /* ===== SLOTS ===== */
 const SY=[['🍒',30,5],['🍋',24,12],['🍇',18,25],['🔔',12,60],['⭐',8,150],['7️⃣',5,400],['💎',3,1000]];
 function slPick(){let r=Math.random()*100;for(const s of SY){if((r-=s[1])<0)return s}return SY[0]}
 let slCur=[],slBusy=false,CH=80,slN=1;
-function slSetN(n){if(slBusy)return;slN=n;document.querySelectorAll('.cnt').forEach(b=>b.classList.toggle('on',+b.dataset.n===n));slInit();say('m5',n>1?'Каждый слот — отдельная ставка ('+n+' шт.)':'Крути барабаны!')}
+function slSetN(n){if(slBusy)return;slN=n;document.querySelectorAll('.cnt').forEach(b=>b.classList.toggle('on',+b.dataset.n===n));slInit();say('m5',n>1?'slN':'m5i','',[n])}
 function slInit(){CH=slN>1?60:80;const m=$('machines');m.style.setProperty('--ch',CH+'px');
  const rnd=()=>SY[Math.random()*SY.length|0][0];slCur=[];let h='';
  for(let k=0;k<slN;k++){slCur.push([0,1,2].map(()=>[rnd(),rnd(),rnd()]));h+='<div class="reels">'+'<div class="reel"><div class="strip"></div></div>'.repeat(3)+'</div>'}
  m.innerHTML=h;[...m.children].forEach((mc,k)=>[...mc.children].forEach((r,i)=>r.firstChild.innerHTML=slCur[k][i].map(x=>'<div>'+x+'</div>').join('')));
  $('pt').innerHTML=SY.map(s=>'<span>'+s[0]+s[0]+s[0]+' ×'+s[2]+'</span>').join('')+'<span>🍒🍒 ×1</span>'}
 function slSpin(){if(slBusy)return;const b=Math.floor(+bet.value),tot=b*slN;
- if(!b||b<1||tot>bal){say('m5','Неверная ставка или не хватает денег на '+slN+' сл. (нужно '+fmt(tot||0)+')','lose');return}
- bal-=tot;show();slBusy=true;$('sspin').disabled=true;document.querySelectorAll('.cnt').forEach(x=>x.disabled=true);say('m5','Крутим... (−'+fmt(tot)+')');
+ if(!b||b<1||tot>bal){say('m5','slBad','lose',[slN,tot]);return}
+ bal-=tot;show();slBusy=true;$('sspin').disabled=true;document.querySelectorAll('.cnt').forEach(x=>x.disabled=true);say('m5','slGo','',[tot]);
  const rnd=()=>SY[Math.random()*SY.length|0][0],machs=[...$('machines').children],results=[];let maxD=0;
  machs.forEach((mc,k)=>{const res=[slPick(),slPick(),slPick()];results.push(res);
   [...mc.children].forEach((r,i)=>{const st=r.firstChild,mid=[],n=20+i*8+(Math.random()*6|0);
@@ -299,7 +353,7 @@ function slEnd(results,b,tot){let w=0,wins=0;const machs=[...$('machines').child
   if(m){w+=b*m;wins++;machs[k].classList.add('won');setTimeout(()=>machs[k]&&machs[k].classList.remove('won'),1800)}});
  bal+=w;show();slBusy=false;$('sspin').disabled=false;document.querySelectorAll('.cnt').forEach(x=>x.disabled=false);
  const net=w-tot;
- say('m5',w?(slN>1?'Выиграло слотов: '+wins+' из '+slN+' · +'+fmt(w):'Выигрыш +'+fmt(w))+(slN>1?' (итог '+(net>=0?'+':'−')+fmt(Math.abs(net))+')':''):'Не повезло',net>0?'win':w?'':'lose')}
+ say('m5','slRes',net>0?'win':w?'':'lose',[w,wins,slN,net])}
 
 /* ===== PENGUIN ===== */
 const gc=$('pgcanvas'),gx=gc.getContext('2d'),PS=120,PX0=90;
@@ -307,21 +361,21 @@ let pst={j:0,f:0};
 let pg={on:false,idx:0,bet:0,phase:'idle',t0:0,broke:false,cam:0,parts:[]};
 const pP=()=>+$('pgc').value/100,pSt=()=>Math.round((0.1+(+$('pgc').value-5)*1.9/65)*10)/10,pgM=i=>1+pSt()*i;
 function pgInfo(){$('pgcv').textContent=Math.round(pP()*100);$('pgsv').textContent='+'+pSt().toFixed(1);
- $('pm2').textContent='×'+(pg.on?pgM(pg.idx):1).toFixed(1);$('pwin').textContent='выигрыш: '+fmt(pg.on?pg.bet*pgM(pg.idx):0);
- $('pstat').textContent='Прыжков: '+pst.j+' · падений: '+pst.f+(pst.j?' ('+Math.round(pst.f/pst.j*100)+'%)':'');
- $('phint').textContent='Следующий прыжок: шанс упасть '+Math.round(pP()*100)+'% · множитель станет ×'+pgM(pg.on?pg.idx+1:1).toFixed(1)}
+ $('pm2').textContent='×'+(pg.on?pgM(pg.idx):1).toFixed(1);$('pwin').textContent=tr('pwin',pg.on?pg.bet*pgM(pg.idx):0);
+ $('pstat').textContent=tr('pstat',pst.j,pst.f);
+ $('phint').textContent=tr('phint',Math.round(pP()*100),pgM(pg.on?pg.idx+1:1).toFixed(1))}
 function pgBtns(){const rd=pg.on&&pg.phase==='ready';$('pstart').disabled=pg.on;$('pjump').disabled=!rd;$('pcash').disabled=!(rd&&pg.idx>0);$('pgc').disabled=pg.on}
 $('pgc').oninput=pgInfo;
-function pgStart(){if(pg.on)return;const b=getBet();if(!b){say('m6','Неверная ставка','lose');return}
- bal-=b;show();pg.on=true;pg.idx=0;pg.bet=b;pg.phase='ready';pg.parts=[];say('m6','Жми «Прыгнуть»!');pgBtns();pgInfo()}
+function pgStart(){if(pg.on)return;const b=getBet();if(!b){say('m6','badbet','lose');return}
+ bal-=b;show();pg.on=true;pg.idx=0;pg.bet=b;pg.phase='ready';pg.parts=[];say('m6','pgGo');pgBtns();pgInfo()}
 function pgJump(){if(pg.phase!=='ready')return;pg.broke=Math.random()<pP();pg.phase='jump';pg.t0=performance.now();pgBtns()}
 function pgCash(){if(pg.phase!=='ready'||pg.idx<1)return;const w=pg.bet*pgM(pg.idx);bal+=w;show();
- say('m6','Забрал ×'+pgM(pg.idx).toFixed(1)+': +'+fmt(w),'win');pg.on=false;pg.phase='idle';pgBtns();pgInfo()}
+ say('m6','pgCashed','win',[pgM(pg.idx).toFixed(1),w]);pg.on=false;pg.phase='idle';pgBtns();pgInfo()}
 function pgLand(ts){pst.j++;if(pg.broke)pst.f++;if(pg.broke){pg.phase='fall';pg.t0=ts;
   for(let k=0;k<16;k++)pg.parts.push({wx:(pg.idx+1)*PS+(Math.random()-.5)*40,y:170,vx:(Math.random()-.5)*3,vy:-2-Math.random()*4});
-  say('m6','Льдина треснула! Пингвин в воде...','lose')}
- else{pg.idx++;pg.phase='ready';say('m6','Льдина выдержала! Теперь ×'+pgM(pg.idx).toFixed(1)+' — прыгать дальше или забрать?','win');pgBtns();pgInfo()}}
-function pgEnd(){pg.on=false;pg.phase='idle';pg.idx=0;say('m6','Ставка сгорела: −'+fmt(pg.bet),'lose');pgBtns();pgInfo()}
+  say('m6','pgBreak','lose')}
+ else{pg.idx++;pg.phase='ready';say('m6','pgHold','win',[pgM(pg.idx).toFixed(1)]);pgBtns();pgInfo()}}
+function pgEnd(){pg.on=false;pg.phase='idle';pg.idx=0;say('m6','pgLost','lose',[pg.bet]);pgBtns();pgInfo()}
 const pel=(x,y,a,b,c)=>{gx.fillStyle=c;gx.beginPath();gx.ellipse(x,y,a,b,0,0,7);gx.fill()};
 function ice(x,y,w){gx.fillStyle='#8fcbec';gx.beginPath();gx.roundRect(x,y,w,26,9);gx.fill();gx.fillStyle='#f2fbff';gx.beginPath();gx.roundRect(x,y-4,w,13,7);gx.fill()}
 function pgFloe(x,y,sc,d){const w=44*sc;
@@ -355,5 +409,6 @@ function pgLoop(ts){
  if($('g6').classList.contains('on'))pgDraw(ts);
  requestAnimationFrame(pgLoop)}
 
-show();plAuto();wAuto();rlRender();slInit();requestAnimationFrame(rlLoop);pgBtns();pgInfo();requestAnimationFrame(pgLoop);
+say('m1','m1i');say('m2','m2i');say('m3','m3i');say('m4','m4i');say('m5','m5i');say('m6','m6i');
+show();plAuto();wAuto();rlRender();slInit();requestAnimationFrame(rlLoop);pgBtns();pgInfo();requestAnimationFrame(pgLoop);applyLang();
 </script></body></html>
